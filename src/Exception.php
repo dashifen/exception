@@ -22,8 +22,7 @@ class Exception extends \Exception {
 	 * @throws ReflectionException
 	 */
 	public function __construct($message = "", $code = 0, Throwable $previous = null) {
-		$code = $this->setCode($code);
-		parent::__construct($message, $code, $previous);
+		parent::__construct($message, $this->setCode($code), $previous);
 	}
 
 	/**
@@ -40,6 +39,13 @@ class Exception extends \Exception {
 	 */
 	protected function setCode(int $code, int $default = self::UNKNOWN_ERROR): int {
 		$reflection = new ReflectionClass($this);
+
+		// if our $code is in the array of this exception's constants, then
+		// we'll return it.  when it's not, we reset it to the default.  the
+		// goal is to provide a list of error codes that can be used in catch
+		// blocks -- usually with switch statements -- to differentiate
+		// between the same type of exception with differing messages.
+
 		if (!in_array($code, $reflection->getConstants())) {
 			$code = $default;
 		}

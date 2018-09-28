@@ -18,8 +18,6 @@ class Exception extends \Exception {
 	 * @param string         $message
 	 * @param int            $code
 	 * @param Throwable|null $previous
-	 *
-	 * @throws ReflectionException
 	 */
 	public function __construct($message = "", $code = 0, Throwable $previous = null) {
 		parent::__construct($message, $this->setCode($code), $previous);
@@ -35,21 +33,31 @@ class Exception extends \Exception {
 	 * @param int $default
 	 *
 	 * @return int
-	 * @throws ReflectionException
 	 */
 	protected function setCode(int $code, int $default = self::UNKNOWN_ERROR): int {
-		$reflection = new ReflectionClass($this);
+		$returnValue = $default;
 
-		// if our $code is in the array of this exception's constants, then
-		// we'll return it.  when it's not, we reset it to the default.  the
-		// goal is to provide a list of error codes that can be used in catch
-		// blocks -- usually with switch statements -- to differentiate
-		// between the same type of exception with differing messages.
+		try {
+			$constants = (new ReflectionClass($this))->getConstants();
 
-		if (!in_array($code, $reflection->getConstants())) {
-			$code = $default;
+			// if our $code is in the array of this exception's constants, then
+			// we'll return it.  when it's not, we reset it to the default.  the
+			// goal is to provide a list of error codes that can be used in catch
+			// blocks -- usually with switch statements -- to differentiate
+			// between the same type of exception with differing messages.
+
+			$returnValue = in_array($code, $constants) ? $code : $default;
+		} catch (ReflectionException $exception) {
+
+			// a ReflectionException is thrown when the class that we're
+			// trying to reflect doesn't exist.  but, since we're reflecting
+			// this class, we know it exists.  in order to avoid IDE related
+			// messages about uncaught exceptions, we'll trigger the following
+			// error, but we also know that we should never get here.
+
+			trigger_error("Unable to reflect.", E_ERROR);
 		}
-		
-		return $code;
+
+		return $returnValue;
 	}
 }
